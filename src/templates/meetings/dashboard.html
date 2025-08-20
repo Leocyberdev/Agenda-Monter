@@ -115,7 +115,7 @@
                                             <p class="mb-1 text-muted">{{ notification.message }}</p>
                                             <small class="text-muted">
                                                 <i class="bi bi-clock me-1"></i>
-                                                {{ notification.created_at.strftime('%d/%m/%Y às %H:%M') }}
+                                                {{ notification.created_at.isoformat() }}
                                             </small>
                                         </div>
                                         {% if not notification.is_read %}
@@ -160,8 +160,8 @@
                                         </p>
                                         <p class="mb-0">
                                             <i class="bi bi-clock me-1"></i>
-                                            {{ meeting.start_datetime.strftime('%H:%M') }} - 
-                                            {{ meeting.end_datetime.strftime('%H:%M') }}
+                                            {{ meeting.start_datetime.isoformat() }} - 
+                                            {{ meeting.end_datetime.isoformat() }}
                                         </p>
                                     </div>
                                     <span class="badge bg-light text-dark">
@@ -199,7 +199,7 @@
                                     </p>
                                     <p class="mb-0 text-muted">
                                         <i class="bi bi-calendar me-1"></i>
-                                        {{ meeting.start_datetime.strftime('%d/%m/%Y às %H:%M') }}
+                                        {{ meeting.start_datetime.isoformat() }}
                                     </p>
                                 </div>
                                 <span class="badge bg-primary">
@@ -340,4 +340,53 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.notification-item small').forEach(span => {
+        const datetimeStr = span.textContent.trim();
+        try {
+            const date = new Date(datetimeStr);
+            if (!isNaN(date.getTime())) {
+                span.textContent = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+            }
+        } catch (e) {
+            console.error('Erro ao parsear data da notificação:', datetimeStr, e);
+        }
+    });
+
+    document.querySelectorAll('.meeting-card p:nth-child(3)').forEach(p => {
+        const timeText = p.textContent.trim();
+        const parts = timeText.split(' - ');
+        if (parts.length === 2) {
+            const startStr = parts[0].replace(':', '');
+            const endStr = parts[1].replace(':', '');
+            
+            // Assumindo que a data é a de hoje para as reuniões de hoje
+            const today = new Date();
+            const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(startStr.substring(0, 2)), parseInt(startStr.substring(2, 4)));
+            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(endStr.substring(0, 2)), parseInt(endStr.substring(2, 4)));
+
+            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                p.textContent = startDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' - ' + endDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+            }
+        }
+    });
+
+    document.querySelectorAll('.upcoming-meetings p:nth-child(3)').forEach(p => {
+        const datetimeStr = p.textContent.trim();
+        try {
+            const date = new Date(datetimeStr);
+            if (!isNaN(date.getTime())) {
+                p.textContent = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+            }
+        } catch (e) {
+            console.error('Erro ao parsear data da próxima reunião:', datetimeStr, e);
+        }
+    });
+});
+</script>
+
 
