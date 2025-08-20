@@ -217,7 +217,8 @@ def dashboard():
 
     today = now_brazil.date()
     today_meetings_raw = Meeting.query.filter(
-        db.func.date(Meeting.start_datetime.in_timezone(BRAZIL_TZ)) == today,
+        Meeting.start_datetime >= now_brazil.replace(hour=0, minute=0, second=0, microsecond=0) and \
+        Meeting.start_datetime < now_brazil.replace(hour=0, minute=0, second=0, microsecond=0) + timedelta(days=1),
         (Meeting.created_by == current_user.id) | (Meeting.participants.like(f'%{current_user.username}%'))
     ).order_by(Meeting.start_datetime).all()
 
