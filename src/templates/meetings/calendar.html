@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Calendário - Sistema de Reuniões{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-overlay">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-6 mb-0">
+                    <i class="bi bi-calendar3 me-3"></i>Calendário de Reuniões
+                </h1>
+                <p class="text-muted">Visualize todas as reuniões agendadas</p>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('meetings.create_meeting') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Nova Reunião
+                </a>
+                <button class="btn btn-outline-secondary ms-2" onclick="calendar.today()">
+                    <i class="bi bi-calendar-day me-1"></i>Hoje
+                </button>
+                <button class="btn btn-outline-secondary ms-2" onclick="calendar.prev()">
+                    <i class="bi bi-chevron-left me-1"></i>Anterior
+                </button>
+                <button class="btn btn-outline-secondary ms-2" onclick="calendar.next()">
+                    <i class="bi bi-chevron-right me-1"></i>Próximo
+                </button>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-lg-9">
+                <div class="card">
+                    <div class="card-body">
+                        <div id="calendar"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Legenda
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <span class="badge bg-primary me-2">●</span>
+                            <small>Sala de Reunião</small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="badge bg-success me-2">●</span>
+                            <small>Espaço Reset</small>
+                        </div>
+                        <div class="mb-2">
+                            <span class="badge bg-warning me-2">●</span>
+                            <small>Refeitório</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-day me-2"></i>Reuniões de Hoje
+                        </h5>
+                    </div>
+                    <div class="card-body" id="todayMeetings">
+                        <p class="text-muted">Selecione uma data para ver as reuniões</p>
+                    </div>
+                </div>
+                
+                <div class="card mt-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightbulb me-2"></i>Dicas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="bi bi-mouse me-1"></i>
+                                <small>Clique em uma reunião para ver detalhes</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-calendar-plus me-1"></i>
+                                <small>Clique em uma data para criar reunião</small>
+                            </li>
+                            <li class="mb-2">
+                                <i class="bi bi-arrows-move me-1"></i>
+                                <small>Arraste reuniões para reagendar</small>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes da Reunião -->
+<div class="modal fade" id="meetingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="meetingModalTitle">
+                    <i class="bi bi-calendar-event me-2"></i>
+                    Detalhes da Reunião
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="meetingModalBody">
+                <!-- Conteúdo será preenchido via JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Fechar
+                </button>
+                <div id="meetingActions">
+                    <!-- Botões de ação serão adicionados via JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let calendar;
+const events = {{ events|safe }};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'dayGridMonth',
+        locale: 'pt-br',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia'
+        },
+        events: events.map(event => ({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            end: event.end,
+            backgroundColor: getRoomColor(event.room),
+            borderColor: getRoomColor(event.room),
+            extendedProps: {
+                room: event.room,
+                creator: event.creator
+            }
+        })),
+        eventClick: function(info) {
+            showMeetingDetails(info.event);
+        },
+        dateClick: function(info) {
+            // Redirecionar para criar reunião com data pré-selecionada
+            const date = info.dateStr;
+            window.location.href = `/meetings/create?date=${date}`;
+        },
+        eventDrop: function(info) {
+            // Reagendar reunião (apenas para reuniões próprias)
+            updateMeetingDateTime(info.event);
+        },
+        dayMaxEvents: 3,
+        moreLinkClick: 'popover',
+        height: 'auto'
+    });
+    
+    calendar.render();
+    
+    // Mostrar reuniões de hoje inicialmente
+    showTodayMeetings();
+});
+
+function getRoomColor(roomName) {
+    switch(roomName) {
+        case 'Sala de Reunião':
+            return '#0d6efd'; // Azul
+        case 'Espaço Reset':
+            return '#198754'; // Verde
+        case 'Refeitório':
+            return '#ffc107'; // Amarelo
+        default:
+            return '#6c757d'; // Cinza
+    }
+}
+
+function showMeetingDetails(event) {
+    const modalTitle = document.getElementById('meetingModalTitle');
+    const modalBody = document.getElementById('meetingModalBody');
+    const modalActions = document.getElementById('meetingActions');
+    
+    modalTitle.innerHTML = `<i class="bi bi-calendar-event me-2"></i>${event.title}`;
+    
+    const startDate = new Date(event.start);
+    const endDate = new Date(event.end);
+    
+    // Buscar detalhes completos da reunião via AJAX
+    fetch(`/meetings/api/meeting_details/${event.id}`)
+        .then(response => response.json())
+        .then(meeting => {
+            let recurrenceInfo = '';
+            if (meeting.is_recurring) {
+                const recurrenceTypes = {
+                    'daily': 'Diária (dias úteis)',
+                    'weekly': 'Semanal',
+                    'monthly': 'Mensal'
+                };
+                const recurrenceEndDate = new Date(meeting.recurrence_end).toLocaleDateString('pt-BR');
+                recurrenceInfo = `
+                    <div class="col-12 mb-3">
+                        <strong><i class="bi bi-arrow-repeat me-1"></i>Recorrência:</strong><br>
+                        <span class="badge bg-info me-2">${recurrenceTypes[meeting.recurrence_type] || meeting.recurrence_type}</span>
+                        <small class="text-muted">até ${recurrenceEndDate}</small>
+                    </div>
+                `;
+            } else if (meeting.parent_meeting_id) {
+                recurrenceInfo = `
+                    <div class="col-12 mb-3">
+                        <strong><i class="bi bi-arrow-repeat me-1"></i>Parte de série recorrente</strong><br>
+                        <small class="text-muted">Esta é uma instância de uma reunião recorrente</small>
+                    </div>
+                `;
+            }
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-calendar3 me-1"></i>Data:</strong><br>
+                        <span class="text-muted">${startDate.toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-clock me-1"></i>Horário:</strong><br>
+                        <span class="text-muted">${startDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${endDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-geo-alt me-1"></i>Local:</strong><br>
+                        <span class="badge" style="background-color: ${getRoomColor(event.extendedProps.room)}">${event.extendedProps.room}</span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-person me-1"></i>Criado por:</strong><br>
+                        <span class="text-muted">${event.extendedProps.creator}</span>
+                    </div>
+                </div>
+                ${recurrenceInfo}
+                ${meeting.description ? `
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <strong><i class="bi bi-card-text me-1"></i>Descrição:</strong><br>
+                        <span class="text-muted">${meeting.description}</span>
+                    </div>
+                </div>
+                ` : ''}
+                ${meeting.participants ? `
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <strong><i class="bi bi-people me-1"></i>Participantes:</strong><br>
+                        <span class="text-muted">${meeting.participants}</span>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-calendar3 me-1"></i>Data:</strong><br>
+                        <span class="text-muted">${startDate.toLocaleDateString('pt-BR')}</span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-clock me-1"></i>Horário:</strong><br>
+                        <span class="text-muted">${startDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})} - ${endDate.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'})}</span>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-geo-alt me-1"></i>Local:</strong><br>
+                        <span class="badge" style="background-color: ${getRoomColor(event.extendedProps.room)}">${event.extendedProps.room}</span>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <strong><i class="bi bi-person me-1"></i>Criado por:</strong><br>
+                        <span class="text-muted">${event.extendedProps.creator}</span>
+                    </div>
+                </div>
+            `;
+        });
+    
+    // Adicionar botões de ação se for reunião do usuário atual
+    modalActions.innerHTML = `
+        <a href="/meetings/edit/${event.id}" class="btn btn-primary">
+            <i class="bi bi-pencil me-1"></i>Editar
+        </a>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('meetingModal'));
+    modal.show();
+}
+
+function showTodayMeetings() {
+    const today = new Date().toISOString().split('T')[0];
+    const todayEvents = events.filter(event => event.start.startsWith(today));
+    
+    const todayMeetingsEl = document.getElementById('todayMeetings');
+    
+    if (todayEvents.length === 0) {
+        todayMeetingsEl.innerHTML = '<p class="text-muted mb-0">Nenhuma reunião hoje</p>';
+        return;
+    }
+    
+    let html = '';
+    todayEvents.forEach(event => {
+        const startTime = new Date(event.start).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        const endTime = new Date(event.end).toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        
+        html += `
+            <div class="mb-2 p-2 border rounded">
+                <strong>${event.title}</strong><br>
+                <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>${startTime} - ${endTime}<br>
+                    <i class="bi bi-geo-alt me-1"></i>${event.room}
+                </small>
+            </div>
+        `;
+    });
+    
+    todayMeetingsEl.innerHTML = html;
+}
+
+function updateMeetingDateTime(event) {
+    // Implementar atualização de data/hora via AJAX
+    const newStart = event.start.toISOString();
+    const newEnd = event.end.toISOString();
+    
+    fetch(`/meetings/api/update_datetime/${event.id}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            start_datetime: newStart,
+            end_datetime: newEnd
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Mostrar mensagem de sucesso
+            showAlert('Reunião reagendada com sucesso!', 'success');
+        } else {
+            // Reverter mudança e mostrar erro
+            event.revert();
+            showAlert(data.error || 'Erro ao reagendar reunião', 'danger');
+        }
+    })
+    .catch(error => {
+        event.revert();
+        showAlert('Erro ao reagendar reunião', 'danger');
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-remover após 5 segundos
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+{% endblock %}
+

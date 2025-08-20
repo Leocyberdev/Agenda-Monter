@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+
+{% block title %}Minhas Reuniões - Sistema de Reuniões{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4">
+        <i class="bi bi-person-check me-3"></i>Minhas Reuniões
+    </h1>
+    <p class="text-muted">Reuniões criadas por você</p>
+
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('meetings.create_meeting') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-1"></i>Nova Reunião
+                </a>
+            </div>
+        </div>
+
+{% if meetings %}
+        <div class="row">
+            {% for meeting in meetings %}
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-event me-2"></i>{{ meeting.title }}
+                        </h5>
+                        <small class="text-muted">ID: {{ meeting.id }}</small>
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-three-dots"></i>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('meetings.edit_meeting', meeting_id=meeting.id) }}">
+                                        <i class="bi bi-pencil me-2"></i>Editar
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <button class="dropdown-item text-danger" onclick="confirmDelete('{{ meeting.id }}', '{{ meeting.title|e }}', {{ 'true' if meeting.is_recurring and not meeting.parent_meeting_id else 'false' }})">
+                                        <i class="bi bi-trash me-2"></i>Cancelar
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <strong><i class="bi bi-calendar3 me-1"></i>Data:</strong><br>
+                                <span class="text-muted meeting-date" data-date="{{ meeting.start_datetime_brazil.isoformat() }}">
+                                    {{ meeting.start_datetime_brazil.strftime('%d/%m/%Y') if meeting.start_datetime_brazil }}
+                                </span>
+                            </div>
+                            <div class="col-6">
+                                <strong><i class="bi bi-clock me-1"></i>Horário:</strong><br>
+                                <span class="text-muted meeting-time"
+                                      data-start="{{ meeting.start_datetime_brazil.isoformat() if meeting.start_datetime_brazil }}"
+                                      data-end="{{ meeting.end_datetime_brazil.isoformat() if meeting.end_datetime_brazil }}">
+                                    {% if meeting.start_datetime_brazil and meeting.end_datetime_brazil %}
+                                        {{ meeting.start_datetime_brazil.strftime('%H:%M') }} - {{ meeting.end_datetime_brazil.strftime('%H:%M') }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong><i class="bi bi-geo-alt me-1"></i>Local:</strong><br>
+                                <span class="badge bg-primary">{{ meeting.room.name }}</span>
+                            </div>
+                        </div>
+
+                        {% if meeting.description %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong><i class="bi bi-file-text me-1"></i>Descrição:</strong><br>
+                                <span class="text-muted">{{ meeting.description }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if meeting.participants %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong><i class="bi bi-people me-1"></i>Participantes:</strong><br>
+                                {% for participant in meeting.get_participants_list() %}
+                                    <span class="badge bg-secondary me-1">{{ participant }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if meeting.is_recurring %}
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <strong><i class="bi bi-arrow-repeat me-1"></i>Recorrência:</strong><br>
+                                <span class="badge bg-info">
+                                    {% if meeting.recurrence_type == 'daily' %}Diária
+                                    {% elif meeting.recurrence_type == 'weekly' %}Semanal
+                                    {% elif meeting.recurrence_type == 'monthly' %}Mensal
+                                    {% endif %}
+                                    {% if meeting.recurrence_end %}
+                                        até {{ meeting.recurrence_end.strftime('%d/%m/%Y') }}
+                                    {% else %}
+                                        até data indefinida
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row">
+                            <div class="col-12">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock-history me-1"></i>
+                                    {% if meeting.created_at_brazil %}
+                                        Criado em {{ meeting.created_at_brazil.strftime('%d/%m/%Y às %H:%M') }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-transparent">
+                        {% if meeting.start_datetime and meeting.start_datetime > current_time %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-calendar-plus me-1"></i>Agendada
+                            </span>
+                        {% elif meeting.start_datetime and meeting.start_datetime <= current_time and meeting.end_datetime > current_time %}
+                            <span class="badge bg-warning">
+                                <i class="bi bi-play-circle me-1"></i>Em andamento
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">
+                                <i class="bi bi-check-circle me-1"></i>Finalizada
+                            </span>
+                        {% endif %}
+
+                        {% if meeting.is_recurring and meeting.child_meetings %}
+                            <span class="badge bg-info ms-2">
+                                <i class="bi bi-arrow-repeat me-1"></i>{{ meeting.child_meetings|length }} recorrências
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+{% else %}
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="bi bi-calendar-x text-muted" style="font-size: 4rem;"></i>
+                        <h4 class="mt-3 text-muted">Nenhuma reunião encontrada</h4>
+                        <p class="text-muted">Você ainda não criou nenhuma reunião.</p>
+                        <a href="{{ url_for('meetings.create_meeting') }}" class="btn btn-primary">
+                            <i class="bi bi-plus-circle me-1"></i>Criar Primeira Reunião
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+{% endif %}
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Confirmar Cancelamento
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja cancelar a reunião <strong id="meetingTitle"></strong>?</p>
+                <p class="text-muted">Esta ação não pode ser desfeita e todos os participantes serão notificados.</p>
+                
+                <!-- Opções para reuniões recorrentes -->
+                <div id="recurringOptions" style="display: none;">
+                    <div class="card border-warning mt-3">
+                        <div class="card-header bg-warning text-dark">
+                            <h6 class="mb-0">
+                                <i class="bi bi-arrow-repeat me-2"></i>Reunião Recorrente
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-3">Esta é uma reunião recorrente. Escolha uma opção:</p>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="delete_all_recurring" value="false" id="deleteThisOnly" checked>
+                                <label class="form-check-label" for="deleteThisOnly">
+                                    <strong>Cancelar apenas esta reunião</strong>
+                                    <br><small class="text-muted">As outras reuniões da série permanecerão inalteradas</small>
+                                </label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="radio" name="delete_all_recurring" value="true" id="deleteAllRecurring">
+                                <label class="form-check-label" for="deleteAllRecurring">
+                                    <strong>Cancelar todas as reuniões da série</strong>
+                                    <br><small class="text-muted">Todas as reuniões recorrentes serão canceladas</small>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancelar
+                </button>
+                <form id="deleteForm" method="POST" style="display: inline;">
+                    <input type="hidden" name="delete_all_recurring" id="deleteAllRecurringInput" value="false">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Confirmar Cancelamento
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmDelete(meetingId, meetingTitle, isRecurring) {
+    document.getElementById('meetingTitle').textContent = meetingTitle;
+    document.getElementById('deleteForm').action = `/meetings/delete/${meetingId}`;
+    
+    // Mostrar ou ocultar opções de recorrência
+    const recurringOptions = document.getElementById('recurringOptions');
+    if (isRecurring) {
+        recurringOptions.style.display = 'block';
+    } else {
+        recurringOptions.style.display = 'none';
+    }
+    
+    // Resetar opções
+    document.getElementById('deleteThisOnly').checked = true;
+    document.getElementById('deleteAllRecurringInput').value = 'false';
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+// Atualizar o campo hidden quando as opções de rádio mudarem
+document.addEventListener('DOMContentLoaded', function() {
+    const radioButtons = document.querySelectorAll('input[name="delete_all_recurring"]');
+    const hiddenInput = document.getElementById('deleteAllRecurringInput');
+    
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            hiddenInput.value = this.value;
+        });
+    });
+});
+
+// ✅ Converter horários para fuso local do navegador
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.meeting-time').forEach(span => {
+        const start = span.dataset.start ? new Date(span.dataset.start) : null;
+        const end = span.dataset.end ? new Date(span.dataset.end) : null;
+        if(start && end){
+            span.textContent = `${start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        }
+    });
+    document.querySelectorAll('.meeting-date').forEach(span => {
+        const date = span.dataset.date ? new Date(span.dataset.date) : null;
+        if(date){
+            span.textContent = date.toLocaleDateString('pt-BR');
+        }
+    });
+});
+</script>
+{% endblock %}

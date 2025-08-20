@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Gerenciar Usuários - Sistema de Reuniões{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-overlay">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-6 mb-0">
+                    <i class="bi bi-people me-3"></i>Gerenciar Usuários
+                </h1>
+                <p class="text-muted">Informações e controle de usuários do sistema</p>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-12">
+                <a href="{{ url_for('auth.create_user') }}" class="btn btn-primary">
+                    <i class="bi bi-person-plus me-1"></i>Novo Usuário
+                </a>
+                <button class="btn btn-outline-secondary ms-2" onclick="refreshUserList()">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Atualizar
+                </button>
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-list me-2"></i>Lista de Usuários ({{ users|length }} usuários)
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if users %}
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th><i class="bi bi-person me-1"></i>Usuário</th>
+                                            <th><i class="bi bi-envelope me-1"></i>E-mail</th>
+                                            <th><i class="bi bi-shield me-1"></i>Tipo</th>
+                                            <th><i class="bi bi-calendar me-1"></i>Criado em</th>
+                                            <th><i class="bi bi-gear me-1"></i>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in users %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar-circle me-2">
+                                                        {{ user.username[0].upper() }}
+                                                    </div>
+                                                    <div>
+                                                        <strong>{{ user.username }}</strong>
+                                                        {% if user.username == 'Monter' %}
+                                                            <span class="badge bg-warning text-dark ms-1">MASTER</span>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>{{ user.email }}</td>
+                                            <td>
+                                                {% if user.is_admin %}
+                                                    <span class="badge bg-danger">
+                                                        <i class="bi bi-shield-fill me-1"></i>Administrador
+                                                    </span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">
+                                                        <i class="bi bi-person me-1"></i>Usuário
+                                                    </span>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ user.created_at.strftime('%d/%m/%Y') if user.created_at else 'N/A' }}</td>
+                                            <td>
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="showUserInfo({{ user.id }})">
+                                                        <i class="bi bi-info-circle"></i>
+                                                    </button>
+                                                    
+                                                    {% if current_user.username == 'Monter' and user.username != 'Monter' %}
+                                                        <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=user.id) }}" style="display: inline;">
+                                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="Alterar permissões">
+                                                                <i class="bi bi-shield-{{ 'slash' if user.is_admin else 'plus' }}"></i>
+                                                            </button>
+                                                        </form>
+                                                    {% endif %}
+                                                    
+                                                    {% if user.id != current_user.id and (current_user.username == 'Monter' or not user.is_admin) %}
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteUser({{ user.id }}, '{{ user.username }}')">
+                                                            <i class="bi bi-trash"></i>
+                                                        </button>
+                                                    {% endif %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5">
+                                <i class="bi bi-people text-muted" style="font-size: 4rem;"></i>
+                                <h4 class="mt-3 text-muted">Nenhum usuário encontrado</h4>
+                                <p class="text-muted">Comece criando o primeiro usuário do sistema.</p>
+                                <a href="{{ url_for('auth.create_user') }}" class="btn btn-primary">
+                                    <i class="bi bi-person-plus me-1"></i>Criar Primeiro Usuário
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Informações do Usuário -->
+<div class="modal fade" id="userInfoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-person-circle me-2"></i>
+                    Informações do Usuário
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="userInfoBody">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle text-warning me-2"></i>
+                    Confirmar Exclusão
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir o usuário <strong id="deleteUserName"></strong>?</p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. O usuário não poderá mais acessar o sistema.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x me-1"></i>Cancelar
+                </button>
+                <form id="deleteUserForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash me-1"></i>Confirmar Exclusão
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.avatar-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function showUserInfo(userId) {
+    const modal = new bootstrap.Modal(document.getElementById('userInfoModal'));
+    const modalBody = document.getElementById('userInfoBody');
+    
+    // Mostrar loading
+    modalBody.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Buscar informações do usuário
+    fetch(`/admin/api/user_info/${userId}`)
+        .then(response => response.json())
+        .then(data => {
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-person me-1"></i>Informações Básicas</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Usuário:</strong></td>
+                                <td>${data.username}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>E-mail:</strong></td>
+                                <td>${data.email}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tipo:</strong></td>
+                                <td>
+                                    ${data.is_admin ? 
+                                        '<span class="badge bg-danger">Administrador</span>' : 
+                                        '<span class="badge bg-secondary">Usuário</span>'
+                                    }
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Criado em:</strong></td>
+                                <td>${new Date(data.created_at).toLocaleDateString('pt-BR')}</td>
+                            </tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-calendar-event me-1"></i>Atividade</h6>
+                        <table class="table table-sm">
+                            <tr>
+                                <td><strong>Reuniões criadas:</strong></td>
+                                <td><span class="badge bg-primary">${data.meetings_count}</span></td>
+                            </tr>
+                        </table>
+                        
+                        ${data.recent_meetings && data.recent_meetings.length > 0 ? `
+                            <h6 class="mt-3"><i class="bi bi-clock-history me-1"></i>Últimas Reuniões</h6>
+                            <div class="list-group list-group-flush">
+                                ${data.recent_meetings.slice(0, 3).map(meeting => `
+                                    <div class="list-group-item px-0 py-2">
+                                        <div class="d-flex justify-content-between">
+                                            <div>
+                                                <strong>${meeting.title}</strong><br>
+                                                <small class="text-muted">${meeting.room_name}</small>
+                                            </div>
+                                            <small class="text-muted">
+                                                ${new Date(meeting.start_datetime).toLocaleDateString('pt-BR')}
+                                            </small>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : '<p class="text-muted">Nenhuma reunião criada ainda</p>'}
+                    </div>
+                </div>
+            `;
+        })
+        .catch(error => {
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Erro ao carregar informações do usuário.
+                </div>
+            `;
+        });
+}
+
+function confirmDeleteUser(userId, username) {
+    document.getElementById('deleteUserName').textContent = username;
+    document.getElementById('deleteUserForm').action = `/admin/delete_user/${userId}`;
+    
+    const modal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+    modal.show();
+}
+
+function refreshUserList() {
+    location.reload();
+}
+</script>
+{% endblock %}
+

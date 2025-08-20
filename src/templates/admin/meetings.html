@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todas as Reuniões - Administração</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; }
+        .container-fluid { padding-top: 20px; }
+        .card { border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: #007bff; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; padding: 15px; font-size: 1.2em; display: flex; justify-content: space-between; align-items: center; }
+        .table th { background-color: #e9ecef; }
+        .table-hover tbody tr:hover { background-color: #f1f1f1; }
+        .btn-action { margin-right: 5px; }
+        .no-meetings { text-align: center; padding: 30px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    {% include 'base.html' %}
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        Todas as Reuniões
+                    </div>
+                    <div class="card-body">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        {% if meetings %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Título</th>
+                                            <th>Sala</th>
+                                            <th>Início</th>
+                                            <th>Término</th>
+                                            <th>Criador</th>
+                                            <th>Participantes</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for meeting in meetings %}
+                                            <tr>
+                                                <td>{{ meeting.title }}</td>
+                                                <td>{{ meeting.room.name }}</td>
+                                                <td>{{ meeting.start_datetime_brazil.strftime('%d/%m/%Y %H:%M') }}</td>
+                                                <td>{{ meeting.end_datetime_brazil.strftime('%d/%m/%Y %H:%M') }}</td>
+                                                <td>{{ meeting.creator.username }}</td>
+                                                <td>{{ meeting.participants or 'N/A' }}</td>
+                                                <td>
+                                                    <a href="{{ url_for('meetings.edit_meeting', meeting_id=meeting.id) }}" class="btn btn-sm btn-info btn-action" title="Editar"><i class="fas fa-edit"></i></a>
+                                                    <form action="{{ url_for('meetings.delete_meeting', meeting_id=meeting.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja cancelar esta reunião?');">
+                                                        <button type="submit" class="btn btn-sm btn-danger btn-action" title="Cancelar"><i class="fas fa-times-circle"></i></button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="no-meetings">Nenhuma reunião encontrada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
+
+

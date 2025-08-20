@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Salas - Administração</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; }
+        .container-fluid { padding-top: 20px; }
+        .card { border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: #007bff; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; padding: 15px; font-size: 1.2em; display: flex; justify-content: space-between; align-items: center; }
+        .table th { background-color: #e9ecef; }
+        .table-hover tbody tr:hover { background-color: #f1f1f1; }
+        .btn-action { margin-right: 5px; }
+        .no-rooms { text-align: center; padding: 30px; color: #6c757d; }
+        .status-active { color: #28a745; }
+        .status-inactive { color: #dc3545; }
+    </style>
+</head>
+<body>
+    {% include 'base.html' %}
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        Gerenciar Salas
+                        <a href="#" class="btn btn-success btn-sm" data-toggle="modal" data-target="#addRoomModal">
+                            <i class="fas fa-plus"></i> Nova Sala
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                                {% for category, message in messages %}
+                                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                        {{ message }}
+                                        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                {% endfor %}
+                            {% endif %}
+                        {% endwith %}
+
+                        {% if rooms %}
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Capacidade</th>
+                                            <th>Localização</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for room in rooms %}
+                                            <tr>
+                                                <td>{{ room.name }}</td>
+                                                <td>{{ room.capacity or 'N/A' }}</td>
+                                                <td>{{ room.location or 'N/A' }}</td>
+                                                <td>
+                                                    {% if room.is_active %}
+                                                        <span class="status-active"><i class="fas fa-check-circle"></i> Ativa</span>
+                                                    {% else %}
+                                                        <span class="status-inactive"><i class="fas fa-times-circle"></i> Inativa</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-info btn-action" title="Editar" onclick="editRoom({{ room.id }}, '{{ room.name }}', {{ room.capacity or 'null' }}, '{{ room.location or '' }}', {{ room.is_active|lower }})">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <form action="#" method="POST" style="display:inline;" onsubmit="return confirm('Tem certeza que deseja alterar o status desta sala?');">
+                                                        <button type="submit" class="btn btn-sm {% if room.is_active %}btn-warning{% else %}btn-success{% endif %} btn-action" title="{% if room.is_active %}Desativar{% else %}Ativar{% endif %}">
+                                                            <i class="fas {% if room.is_active %}fa-pause{% else %}fa-play{% endif %}"></i>
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="no-rooms">Nenhuma sala encontrada.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para adicionar nova sala -->
+    <div class="modal fade" id="addRoomModal" tabindex="-1" role="dialog" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addRoomModalLabel">Nova Sala</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="#" method="POST">
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="roomName">Nome da Sala</label>
+                            <input type="text" class="form-control" id="roomName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="roomCapacity">Capacidade</label>
+                            <input type="number" class="form-control" id="roomCapacity" name="capacity" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="roomLocation">Localização</label>
+                            <input type="text" class="form-control" id="roomLocation" name="location">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Criar Sala</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para editar sala -->
+    <div class="modal fade" id="editRoomModal" tabindex="-1" role="dialog" aria-labelledby="editRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editRoomModalLabel">Editar Sala</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <form action="#" method="POST" id="editRoomForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="editRoomId" name="room_id">
+                        <div class="form-group">
+                            <label for="editRoomName">Nome da Sala</label>
+                            <input type="text" class="form-control" id="editRoomName" name="name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editRoomCapacity">Capacidade</label>
+                            <input type="number" class="form-control" id="editRoomCapacity" name="capacity" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editRoomLocation">Localização</label>
+                            <input type="text" class="form-control" id="editRoomLocation" name="location">
+                        </div>
+                        <div class="form-group">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="editRoomActive" name="is_active">
+                                <label class="form-check-label" for="editRoomActive">Sala Ativa</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        function editRoom(id, name, capacity, location, isActive) {
+            document.getElementById('editRoomId').value = id;
+            document.getElementById('editRoomName').value = name;
+            document.getElementById('editRoomCapacity').value = capacity || '';
+            document.getElementById('editRoomLocation').value = location || '';
+            document.getElementById('editRoomActive').checked = isActive;
+            $('#editRoomModal').modal('show');
+        }
+    </script>
+</body>
+</html>
+

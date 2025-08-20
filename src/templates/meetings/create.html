@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Reunião - Sistema de Reuniões{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="content-overlay">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="display-6 mb-4">
+                    <i class="bi bi-plus-circle me-3"></i>Nova Reunião
+                </h1>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-plus me-2"></i>Informações da Reunião
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" id="meetingForm">
+                            {{ form.hidden_tag() }}
+
+                            <div class="mb-3">
+                                {{ form.title.label(class="form-label") }}
+                                {{ form.title(class="form-control" + (" is-invalid" if form.title.errors else ""), placeholder="Ex: Reunião de Planejamento") }}
+                                {% if form.title.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.title.errors %}{{ error }}{% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.description.label(class="form-label") }}
+                                {{ form.description(class="form-control", rows="3", placeholder="Descrição opcional da reunião") }}
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.room_id.label(class="form-label") }}
+                                    {{ form.room_id(class="form-select" + (" is-invalid" if form.room_id.errors else ""), id="room_id") }}
+                                    {% if form.room_id.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.room_id.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                    <div id="roomAvailability" class="mt-2"></div>
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    {{ form.participants.label(class="form-label") }}
+                                    <div class="border rounded p-3" style="max-height: 150px; overflow-y: auto;">
+                                        {% for value, label in form.participants.choices %}
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="participants" value="{{ value }}" id="participant_{{ value }}" 
+                                                {% if form.participants.data and value in form.participants.data %}checked{% endif %}>
+                                            <label class="form-check-label" for="participant_{{ value }}">
+                                                {{ label }}
+                                            </label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text">Selecione os participantes tocando nas opções</div>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.start_datetime.label(class="form-label") }}
+                                    {{ form.start_datetime(
+                                        class="form-control" + (" is-invalid" if form.start_datetime.errors else ""),
+                                        type="datetime-local",
+                                        id="start_datetime"
+                                    ) }}
+                                    {% if form.start_datetime.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.start_datetime.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                <div class="col-md-6 mb-3">
+                                    {{ form.end_datetime.label(class="form-label") }}
+                                    {{ form.end_datetime(
+                                        class="form-control" + (" is-invalid" if form.end_datetime.errors else ""),
+                                        type="datetime-local",
+                                        id="end_datetime"
+                                    ) }}
+                                    {% if form.end_datetime.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.end_datetime.errors %}{{ error }}{% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <div class="form-check">
+                                        {{ form.is_recurring(class="form-check-input", id="is_recurring") }}
+                                        {{ form.is_recurring.label(class="form-check-label", for="is_recurring") }}
+                                    </div>
+                                </div>
+                                <div class="card-body" id="recurrenceOptions" style="display: none;">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            {{ form.recurrence_type.label(class="form-label") }}
+                                            {{ form.recurrence_type(class="form-select") }}
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            {{ form.recurrence_end.label(class="form-label") }}
+                                            {{ form.recurrence_end(class="form-control", type="date") }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between">
+                                <a href="{{ url_for('meetings.dashboard') }}" class="btn btn-secondary">
+                                    <i class="bi bi-arrow-left me-1"></i>Cancelar
+                                </a>
+                                {{ form.submit(class="btn btn-primary") }}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DICAS -->
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-lightbulb me-2"></i>Dicas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled">
+                            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Verifique a disponibilidade da sala</li>
+                            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Descreva claramente a reunião</li>
+                            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Inclua todos os participantes</li>
+                            <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Use recorrência para eventos regulares</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card mt-3">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="mb-0"><i class="bi bi-building me-2"></i>Salas Disponíveis</h5>
+                    </div>
+                    <div class="card-body">
+                        <p><strong>Sala de Reunião</strong></p>
+                        <p><strong>Espaço Reset</strong></p>
+                        <p><strong>Refeitório</strong></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const recurringCheck = document.getElementById('is_recurring');
+    const recurrenceOptions = document.getElementById('recurrenceOptions');
+    const roomSelect = document.getElementById('room_id');
+    const startDateTime = document.getElementById('start_datetime');
+    const endDateTime = document.getElementById('end_datetime');
+    const roomAvailability = document.getElementById('roomAvailability');
+
+    // ✅ Define horário mínimo ajustado para hora local real
+    const now = new Date();
+    now.setSeconds(0, 0);
+    const tzOffset = now.getTimezoneOffset(); // minutos
+    const localDate = new Date(now.getTime() - tzOffset * 60000);
+    const localISOTime = localDate.toISOString().slice(0, 16);
+
+    if (startDateTime) startDateTime.min = localISOTime;
+    if (endDateTime) endDateTime.min = localISOTime;
+
+    // Mostrar opções de recorrência
+    if (recurringCheck && recurringCheck.checked) {
+        recurrenceOptions.style.display = 'block';
+    }
+
+    recurringCheck.addEventListener('change', () => {
+        recurrenceOptions.style.display = recurringCheck.checked ? 'block' : 'none';
+    });
+
+    function validateSameDay() {
+        const start = new Date(startDateTime.value);
+        const end = new Date(endDateTime.value);
+
+        if (startDateTime.value && endDateTime.value) {
+            if (start.toDateString() !== end.toDateString()) {
+                alert("A reunião deve começar e terminar no mesmo dia.");
+                endDateTime.value = "";
+                endDateTime.focus();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    function checkAvailability() {
+        const roomId = roomSelect.value;
+        const start = startDateTime.value;
+        const end = endDateTime.value;
+
+        if (roomId && start && end) {
+            fetch(`/meetings/api/check_availability?room_id=${roomId}&start_datetime=${start}&end_datetime=${end}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.available) {
+                        roomAvailability.innerHTML = `<div class="alert alert-success py-2"><i class="bi bi-check-circle me-1"></i>Sala disponível</div>`;
+                    } else {
+                        const conflicts = data.conflicts.map(c =>
+                            `${c.title} (${new Date(c.start).toLocaleTimeString()} - ${new Date(c.end).toLocaleTimeString()})`
+                        ).join(', ');
+                        roomAvailability.innerHTML = `<div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle me-1"></i>Conflito: ${conflicts}</div>`;
+                    }
+                })
+                .catch(err => {
+                    console.error("Erro na verificação de disponibilidade:", err);
+                });
+        } else {
+            roomAvailability.innerHTML = '';
+        }
+    }
+
+    roomSelect.addEventListener("change", checkAvailability);
+    startDateTime.addEventListener("change", () => {
+        validateSameDay();
+        checkAvailability();
+    });
+    endDateTime.addEventListener("change", () => {
+        validateSameDay();
+        checkAvailability();
+    });
+});
+</script>
+{% endblock %}

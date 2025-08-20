@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estatísticas - Administração</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; }
+        .container-fluid { padding-top: 20px; }
+        .card { border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .card-header { background-color: #007bff; color: white; border-top-left-radius: 8px; border-top-right-radius: 8px; padding: 15px; font-size: 1.2em; }
+        .stat-card { text-align: center; padding: 20px; }
+        .stat-number { font-size: 2.5em; font-weight: bold; color: #007bff; }
+        .stat-label { font-size: 1.1em; color: #6c757d; margin-top: 5px; }
+        .chart-container { position: relative; height: 300px; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    {% include 'base.html' %}
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i> Estatísticas do Sistema
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Estatísticas Gerais -->
+        <div class="row">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <div class="stat-number">{{ total_users }}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-users"></i> Total de Usuários
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <div class="stat-number">{{ total_meetings }}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-calendar-alt"></i> Total de Reuniões
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <div class="stat-number">{{ total_rooms }}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-door-open"></i> Salas Ativas
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body stat-card">
+                        <div class="stat-number">{{ (total_meetings / total_rooms)|round(1) if total_rooms > 0 else 0 }}</div>
+                        <div class="stat-label">
+                            <i class="fas fa-chart-line"></i> Reuniões por Sala
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-line"></i> Reuniões por Mês (Últimos 6 meses)
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="meetingsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-pie"></i> Salas Mais Utilizadas
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="roomsChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Usuários Mais Ativos -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-trophy"></i> Usuários Mais Ativos
+                    </div>
+                    <div class="card-body">
+                        {% if active_users %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Posição</th>
+                                            <th>Usuário</th>
+                                            <th>Reuniões Criadas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in active_users %}
+                                            <tr>
+                                                <td>
+                                                    {% if loop.index == 1 %}
+                                                        <i class="fas fa-trophy" style="color: gold;"></i>
+                                                    {% elif loop.index == 2 %}
+                                                        <i class="fas fa-medal" style="color: silver;"></i>
+                                                    {% elif loop.index == 3 %}
+                                                        <i class="fas fa-medal" style="color: #cd7f32;"></i>
+                                                    {% else %}
+                                                        {{ loop.index }}º
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ user.username }}</td>
+                                                <td>{{ user.count }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <p class="text-center text-muted">Nenhum dado disponível.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Gráfico de Reuniões por Mês
+        const meetingsCtx = document.getElementById('meetingsChart').getContext('2d');
+        const meetingsData = {
+            labels: [{% for month in meetings_by_month %}'{{ month.month }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Reuniões',
+                data: [{% for month in meetings_by_month %}{{ month.count }}{% if not loop.last %},{% endif %}{% endfor %}],
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                tension: 0.4
+            }]
+        };
+
+        new Chart(meetingsCtx, {
+            type: 'line',
+            data: meetingsData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Gráfico de Salas Mais Utilizadas
+        const roomsCtx = document.getElementById('roomsChart').getContext('2d');
+        const roomsData = {
+            labels: [{% for room in rooms_usage %}'{{ room.name }}'{% if not loop.last %},{% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for room in rooms_usage %}{{ room.count }}{% if not loop.last %},{% endif %}{% endfor %}],
+                backgroundColor: [
+                    '#FF6384',
+                    '#36A2EB',
+                    '#FFCE56',
+                    '#4BC0C0',
+                    '#9966FF',
+                    '#FF9F40'
+                ]
+            }]
+        };
+
+        new Chart(roomsCtx, {
+            type: 'doughnut',
+            data: roomsData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
+

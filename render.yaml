@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: agendamonter
+    env: python
+    plan: free
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn src.main:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --access-logfile - --error-logfile -
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agendamonter-db
+          property: connectionString
+
+databases:
+  - name: agendamonter-db
+    databaseName: agendamonter
+    user: agendamonter
+    plan: free

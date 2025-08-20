@@ -1,0 +1,343 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistema de Reuniões{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mt-4"><i class="bi bi-house me-3"></i>Dashboard</h1>
+    <p class="text-muted">Bem-vindo, {{ current_user.username }}!</p>
+        
+        <!-- Ações Rápidas -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-plus-circle text-primary" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Nova Reunião</h5>
+                        <p class="card-text">Agende uma nova reunião</p>
+                        <a href="{{ url_for('meetings.create_meeting') }}" class="btn btn-primary">
+                            <i class="bi bi-plus me-1"></i>Criar
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-person-check text-success" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Minhas Reuniões</h5>
+                        <p class="card-text">Visualize suas reuniões</p>
+                        <a href="{{ url_for('meetings.my_meetings') }}" class="btn btn-success">
+                            <i class="bi bi-eye me-1"></i>Ver
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-calendar3 text-info" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Calendário</h5>
+                        <p class="card-text">Visualize o calendário</p>
+                        <a href="{{ url_for('meetings.calendar') }}" class="btn btn-info">
+                            <i class="bi bi-calendar me-1"></i>Abrir
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3 mb-3">
+                <div class="card h-100 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-check-circle text-secondary" style="font-size: 2.5rem;"></i>
+                        <h5 class="card-title mt-3">Reuniões Finalizadas</h5>
+                        <p class="card-text">Histórico de reuniões</p>
+                        <a href="{{ url_for('finished_meetings.finished_meetings') }}" class="btn btn-secondary">
+                            <i class="bi bi-archive me-1"></i>Ver Histórico
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if current_user.is_admin %}
+        <!-- Ações Administrativas -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-tools me-2"></i>Ações Administrativas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <a href="{{ url_for('admin.users') }}" class="btn btn-warning w-100">
+                                    <i class="bi bi-tools me-2"></i>Gerenciar Sistema
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Notificações -->
+        <div class="row">
+            <div class="col-lg-12 mb-4">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-bell me-2"></i>Notificações
+                        </h5>
+                        {% if unread_count > 0 %}
+                        <span class="badge bg-danger">{{ unread_count }} não lidas</span>
+                        {% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if notifications %}
+                            <div id="notifications-container">
+                                {% for notification in notifications %}
+                                <div class="notification-item mb-3 p-3 border rounded {% if not notification.is_read %}bg-light{% endif %}" 
+                                     data-notification-id="{{ notification.id }}">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1 {% if not notification.is_read %}fw-bold{% endif %}">
+                                                {{ notification.title }}
+                                                {% if not notification.is_read %}
+                                                <span class="badge bg-primary ms-2">Nova</span>
+                                                {% endif %}
+                                            </h6>
+                                            <p class="mb-1 text-muted">{{ notification.message }}</p>
+                                            <small class="text-muted">
+                                                <i class="bi bi-clock me-1"></i>
+                                                {{ notification.created_at.strftime('%d/%m/%Y às %H:%M') }}
+                                            </small>
+                                        </div>
+                                        {% if not notification.is_read %}
+                                        <button class="btn btn-sm btn-outline-primary mark-as-read-btn" 
+                                                data-notification-id="{{ notification.id }}">
+                                            <i class="bi bi-check"></i> Marcar como lida
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-bell-slash" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Nenhuma notificação encontrada</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Reuniões de Hoje -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-day me-2"></i>Reuniões de Hoje
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if today_meetings %}
+                            {% for meeting in today_meetings %}
+                            <div class="meeting-card mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">{{ meeting.title }}</h6>
+                                        <p class="mb-1">
+                                            <i class="bi bi-geo-alt me-1"></i>{{ meeting.room.name }}
+                                        </p>
+                                        <p class="mb-0">
+                                            <i class="bi bi-clock me-1"></i>
+                                            {{ meeting.start_datetime.strftime('%H:%M') }} - 
+                                            {{ meeting.end_datetime.strftime('%H:%M') }}
+                                        </p>
+                                    </div>
+                                    <span class="badge bg-light text-dark">
+                                        {{ meeting.creator.username }}
+                                    </span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-calendar-x" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Nenhuma reunião agendada para hoje</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Próximas Reuniões -->
+            <div class="col-lg-6 mb-4">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-calendar-plus me-2"></i>Próximas Reuniões
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        {% if upcoming_meetings %}
+                            {% for meeting in upcoming_meetings %}
+                            <div class="d-flex justify-content-between align-items-center mb-3 p-3 bg-light rounded">
+                                <div>
+                                    <h6 class="mb-1">{{ meeting.title }}</h6>
+                                    <p class="mb-1 text-muted">
+                                        <i class="bi bi-geo-alt me-1"></i>{{ meeting.room.name }}
+                                    </p>
+                                    <p class="mb-0 text-muted">
+                                        <i class="bi bi-calendar me-1"></i>
+                                        {{ meeting.start_datetime.strftime('%d/%m/%Y às %H:%M') }}
+                                    </p>
+                                </div>
+                                <span class="badge bg-primary">
+                                    {{ meeting.creator.username }}
+                                </span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center text-muted py-4">
+                                <i class="bi bi-calendar-plus" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Nenhuma reunião agendada</p>
+                                <a href="{{ url_for('meetings.create_meeting') }}" class="btn btn-primary">
+                                    <i class="bi bi-plus me-1"></i>Agendar Reunião
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informações das Salas -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-building me-2"></i>Salas Disponíveis
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="stats-card">
+                                    <i class="bi bi-people" style="font-size: 2rem;"></i>
+                                    <h5 class="mt-2">Sala de Reunião</h5>
+                                    
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="stats-card">
+                                    <i class="bi bi-cup-hot" style="font-size: 2rem;"></i>
+                                    <h5 class="mt-2">Espaço Reset</h5>
+                                    
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="stats-card">
+                                    <i class="bi bi-house" style="font-size: 2rem;"></i>
+                                    <h5 class="mt-2">Refeitório</h5>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.mark-as-read-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const notificationId = this.getAttribute('data-notification-id');
+            
+            fetch(`/notifications/api/notifications/${notificationId}/read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const notificationItem = document.querySelector(`[data-notification-id="${notificationId}"]`);
+                    notificationItem.classList.remove('bg-light');
+
+                    const title = notificationItem.querySelector('h6');
+                    title.classList.remove('fw-bold');
+
+                    const badge = title.querySelector('.badge');
+                    if (badge) {
+                        badge.remove();
+                    }
+
+                    this.remove();
+
+                    const unreadBadge = document.querySelector('.card-header .badge');
+                    if (data.unread_count > 0) {
+                        if (unreadBadge) {
+                            unreadBadge.textContent = `${data.unread_count} não lidas`;
+                        }
+                    } else {
+                        if (unreadBadge) {
+                            unreadBadge.remove();
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao marcar notificação como lida:', error);
+            });
+        });
+    });
+
+    // Atualizar notificações a cada 30 segundos
+    setInterval(function() {
+        fetch('/notifications/api/notifications/unread-count')
+            .then(response => response.json())
+            .then(data => {
+                const unreadBadge = document.querySelector('.card-header .badge');
+                if (data.unread_count > 0) {
+                    if (unreadBadge) {
+                        unreadBadge.textContent = `${data.unread_count} não lidas`;
+                    } else {
+                        const header = document.querySelector('.card-header h5');
+                        const newBadge = document.createElement('span');
+                        newBadge.className = 'badge bg-danger';
+                        newBadge.textContent = `${data.unread_count} não lidas`;
+                        header.parentNode.appendChild(newBadge);
+                    }
+                } else {
+                    if (unreadBadge) {
+                        unreadBadge.remove();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao atualizar contador de notificações:', error);
+            });
+    }, 30000);
+});
+</script>
+{% endblock %}
+
