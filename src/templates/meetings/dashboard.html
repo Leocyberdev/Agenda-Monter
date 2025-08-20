@@ -160,8 +160,8 @@
                                         </p>
                                         <p class="mb-0">
                                             <i class="bi bi-clock me-1"></i>
-                                            {{ meeting.start_datetime.isoformat() }} - 
-                                            {{ meeting.end_datetime.isoformat() }}
+                                            {{ meeting.start_datetime.strftime('%H:%M') }} - 
+                                            {{ meeting.end_datetime.strftime('%H:%M') }}
                                         </p>
                                     </div>
                                     <span class="badge bg-light text-dark">
@@ -199,7 +199,7 @@
                                     </p>
                                     <p class="mb-0 text-muted">
                                         <i class="bi bi-calendar me-1"></i>
-                                        {{ meeting.start_datetime.isoformat() }}
+                                        {{ meeting.start_datetime.strftime('%d/%m/%Y às %H:%M') }}
                                     </p>
                                 </div>
                                 <span class="badge bg-primary">
@@ -220,6 +220,7 @@
                 </div>
             </div>
         </div>
+        
         
         <!-- Informações das Salas -->
         <div class="row">
