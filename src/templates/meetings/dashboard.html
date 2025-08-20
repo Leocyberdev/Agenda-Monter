@@ -115,7 +115,7 @@
                                             <p class="mb-1 text-muted">{{ notification.message }}</p>
                                             <small class="text-muted">
                                                 <i class="bi bi-clock me-1"></i>
-                                                {{ notification.created_at.isoformat() }}
+                                                {{ notification.created_at_brazil.strftime('%d/%m/%Y às %H:%M') }}
                                             </small>
                                         </div>
                                         {% if not notification.is_read %}
@@ -160,8 +160,13 @@
                                         </p>
                                         <p class="mb-0">
                                             <i class="bi bi-clock me-1"></i>
-                                            {{ meeting.start_datetime.strftime('%H:%M') }} - 
-                                            {{ meeting.end_datetime.strftime('%H:%M') }}
+                                            <span class="text-muted meeting-time"
+                                                  data-start="{{ meeting.start_datetime_brazil.isoformat() if meeting.start_datetime_brazil }}"
+                                                  data-end="{{ meeting.end_datetime_brazil.isoformat() if meeting.end_datetime_brazil }}">
+                                                {% if meeting.start_datetime_brazil and meeting.end_datetime_brazil %}
+                                                    {{ meeting.start_datetime_brazil.strftime("%H:%M") }} - {{ meeting.end_datetime_brazil.strftime("%H:%M") }}
+                                                {% endif %}
+                                            </span>
                                         </p>
                                     </div>
                                     <span class="badge bg-light text-dark">
@@ -199,7 +204,17 @@
                                     </p>
                                     <p class="mb-0 text-muted">
                                         <i class="bi bi-calendar me-1"></i>
-                                        {{ meeting.start_datetime.strftime('%d/%m/%Y às %H:%M') }}
+                                        <span class="text-muted meeting-date" data-date="{{ meeting.start_datetime_brazil.isoformat() if meeting.start_datetime_brazil }}">
+                                            {{ meeting.start_datetime_brazil.strftime("%d/%m/%Y") if meeting.start_datetime_brazil }}
+                                        </span>
+                                        às
+                                        <span class="text-muted meeting-time"
+                                              data-start="{{ meeting.start_datetime_brazil.isoformat() if meeting.start_datetime_brazil }}"
+                                              data-end="{{ meeting.end_datetime_brazil.isoformat() if meeting.end_datetime_brazil }}">
+                                            {% if meeting.start_datetime_brazil and meeting.end_datetime_brazil %}
+                                                {{ meeting.start_datetime_brazil.strftime("%H:%M") }}
+                                            {% endif %}
+                                        </span>
                                     </p>
                                 </div>
                                 <span class="badge bg-primary">
@@ -220,7 +235,6 @@
                 </div>
             </div>
         </div>
-        
         
         <!-- Informações das Salas -->
         <div class="row">
@@ -263,11 +277,10 @@
 </div>
 {% endblock %}
 
-
-
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Script para marcar notificações como lidas
     document.querySelectorAll('.mark-as-read-btn').forEach(button => {
         button.addEventListener('click', function() {
             const notificationId = this.getAttribute('data-notification-id');
@@ -312,82 +325,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Atualizar notificações a cada 30 segundos
-    setInterval(function() {
-        fetch('/notifications/api/notifications/unread-count')
-            .then(response => response.json())
-            .then(data => {
-                const unreadBadge = document.querySelector('.card-header .badge');
-                if (data.unread_count > 0) {
-                    if (unreadBadge) {
-                        unreadBadge.textContent = `${data.unread_count} não lidas`;
-                    } else {
-                        const header = document.querySelector('.card-header h5');
-                        const newBadge = document.createElement('span');
-                        newBadge.className = 'badge bg-danger';
-                        newBadge.textContent = `${data.unread_count} não lidas`;
-                        header.parentNode.appendChild(newBadge);
-                    }
-                } else {
-                    if (unreadBadge) {
-                        unreadBadge.remove();
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao atualizar contador de notificações:', error);
-            });
-    }, 30000);
+    // ✅ Converter horários para fuso local do navegador
+    document.querySelectorAll('.meeting-time').forEach(span => {
+        const start = span.dataset.start ? new Date(span.dataset.start) : null;
+        const end = span.dataset.end ? new Date(span.dataset.end) : null;
+        if(start && end){
+            span.textContent = `${start.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})} - ${end.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`;
+        }
+    });
+    document.querySelectorAll('.meeting-date').forEach(span => {
+        const date = span.dataset.date ? new Date(span.dataset.date) : null;
+        if(date){
+            span.textContent = date.toLocaleDateString('pt-BR');
+        }
+    });
 });
 </script>
 {% endblock %}
-
-
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    document.querySelectorAll('.notification-item small').forEach(span => {
-        const datetimeStr = span.textContent.trim();
-        try {
-            const date = new Date(datetimeStr);
-            if (!isNaN(date.getTime())) {
-                span.textContent = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            }
-        } catch (e) {
-            console.error('Erro ao parsear data da notificação:', datetimeStr, e);
-        }
-    });
-
-    document.querySelectorAll('.meeting-card p:nth-child(3)').forEach(p => {
-        const timeText = p.textContent.trim();
-        const parts = timeText.split(' - ');
-        if (parts.length === 2) {
-            const startStr = parts[0].replace(':', '');
-            const endStr = parts[1].replace(':', '');
-            
-            // Assumindo que a data é a de hoje para as reuniões de hoje
-            const today = new Date();
-            const startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(startStr.substring(0, 2)), parseInt(startStr.substring(2, 4)));
-            const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(endStr.substring(0, 2)), parseInt(endStr.substring(2, 4)));
-
-            if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
-                p.textContent = startDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) + ' - ' + endDate.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            }
-        }
-    });
-
-    document.querySelectorAll('.upcoming-meetings p:nth-child(3)').forEach(p => {
-        const datetimeStr = p.textContent.trim();
-        try {
-            const date = new Date(datetimeStr);
-            if (!isNaN(date.getTime())) {
-                p.textContent = date.toLocaleDateString('pt-BR') + ' às ' + date.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            }
-        } catch (e) {
-            console.error('Erro ao parsear data da próxima reunião:', datetimeStr, e);
-        }
-    });
-});
-</script>
 
 
